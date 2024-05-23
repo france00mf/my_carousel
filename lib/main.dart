@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
@@ -44,11 +46,33 @@ class MyCarousel extends StatefulWidget {
 class _MyCarouselState extends State<MyCarousel> {
 
   late Future<List<Media>> filmes;
+ late Future<Widget?> imageWidget;
+ bool? isInternet;
 
       @override
   void initState() {
     super.initState();
-    filmes = carregarFilmes();
+    filmes = verificarConectividade().then((temConexao) {
+      if (temConexao) {
+      return carregarFilmesApi();
+      } else {
+         return carregarFilmes();
+      }
+    });
+
+     verificarConectividade().then((value) {
+      if(value){
+        return isInternet=value;
+      }else{
+        return isInternet=value;
+      }
+    });
+  }
+
+
+   Future<bool> verificarConectividade() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    return connectivityResult != ConnectivityResult.none;
   }
 
   //Verificar se tem internet , para poder carregar o ficheiro json
@@ -57,6 +81,17 @@ class _MyCarouselState extends State<MyCarousel> {
     final String response = await rootBundle.loadString('lib/data.json');
     final List<dynamic> data = json.decode(response);
     return data.map((json) => Media.fromJson(json)).toList();
+  }
+
+  Future<List<Media>> carregarFilmesApi() async {
+    final  response =  await Dio().get("https://api.themoviedb.org/3/movie/now_playing?ap_key=62f37b6a721b68095d76716650d201f1");
+    if(response.statusCode==200){
+       return List<Media>.from((response.data['results'] as List)
+          .map((e) => Media.fromJson(e)));
+    }else{
+      throw Exception('Servidor indisponivel');
+    }
+    // return response.map((json) => Media.fromJson(json)).toList();
   }
 
 //Datasource
@@ -101,11 +136,13 @@ class Media{
   String? backdropUrl;
   String? title;
   String? releaseDate;
+  bool? isOffline;
   Media(
     {
       this.backdropUrl,
       this.title,
-      this.releaseDate
+      this.releaseDate,
+      this.isOffline
     }
   );
 
@@ -114,6 +151,7 @@ class Media{
       title: json['title'],
       backdropUrl: json['backdrop_path'],
       releaseDate: json['release_date'],
+      // isOffline: true
     );
   }
 }
@@ -251,25 +289,29 @@ class ImageWithShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    //   return CachedNetworkImage(
-    //   imageUrl: imageUrl,
-    //   height: height,
-    //   width: width,
-    //   fit: BoxFit.cover,
-    //   placeholder: (_, __) => Shimmer.fromColors(
-    //     baseColor: Colors.grey[850]!,
-    //     highlightColor: Colors.grey[800]!,
-    //     child: Container(
-    //       height: height,
-    //       color: Colors.white,
-    //     ),
-    //   ),
-    //   errorWidget: (_, __, ___) => const Icon(
-    //     Icons.error,
-    //     color:Colors.red
-    //   ),
-    // );
-    return Image.asset(
+
+    return    
+    
+        CachedNetworkImage(
+      imageUrl: imageUrl,
+      height: height,
+      width: width,
+      fit: BoxFit.cover,
+      placeholder: (_, __) => Shimmer.fromColors(
+        baseColor: Colors.grey[850]!,
+        highlightColor: Colors.grey[800]!,
+        child: Container(
+          height: height,
+          color: Colors.white,
+        ),
+      ),
+      errorWidget: (_, __, ___) => const Icon(
+        Icons.error,
+        color:Colors.red
+      ),
+    );
+    
+    Image.asset(
         "assets/img/"+imageUrl, 
         height: height,
         width: width,
