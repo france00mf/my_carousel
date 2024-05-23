@@ -1,5 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shimmer/shimmer.dart';
 
 void main() {
   runApp(const MyApp());
@@ -19,7 +25,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home:  Scaffold(body: MyCarousel()),
+      home: const Scaffold(body: MyCarousel()),
     );
   }
 }
@@ -27,26 +33,33 @@ class CarouselItems{
 
 }
 
-class MyCarousel extends StatelessWidget {
+class MyCarousel extends StatefulWidget {
   
-   MyCarousel({super.key});
+ const  MyCarousel({super.key});
 
-  
+  @override
+  State<MyCarousel> createState() => _MyCarouselState();
+}
+
+class _MyCarouselState extends State<MyCarousel> {
+
+  late Future<List<Media>> filmes;
+
+      @override
+  void initState() {
+    super.initState();
+    filmes = carregarFilmes();
+  }
+
+  //Verificar se tem internet , para poder carregar o ficheiro json
+
+  Future<List<Media>> carregarFilmes() async {
+    final String response = await rootBundle.loadString('lib/data.json');
+    final List<dynamic> data = json.decode(response);
+    return data.map((json) => Media.fromJson(json)).toList();
+  }
 
 //Datasource
- final List<Media> filmes = [
-    Media(
-      title: 'Filme 1',
-      backdropUrl: 'assets/img/tpiqEVTLRz2Mq7eLq5DT8jSrp71.jpg',
-      releaseDate: '12',
-    ),
-    Media(
-      title: 'Filme 2',
-      backdropUrl: 'assets/img/kYgQzzjNis5jJalYtIHgrom0gOx.jpg',
-      releaseDate: '13',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -54,14 +67,29 @@ class MyCarousel extends StatelessWidget {
              child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-        CustomSlider(
-            itemBuilder: (context, itemIndex, _) {
-              return SliderCard(
-                media: filmes[itemIndex],
-                itemIndex: itemIndex,
+            SizedBox(height: 50,),
+        FutureBuilder<List<Media>>(
+          future : filmes,
+          builder:  (context, snapshot) {
+  
+             if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return const Center(child: Text('Erro ao carregar filmes'));
+          } else {
+            return CustomSlider(
+                itemBuilder: (context, itemIndex, _){
+                  final filmes=snapshot.data;
+                  return SliderCard(
+                    media: filmes![itemIndex],
+                    itemIndex: itemIndex,
+                  );
+                },
               );
-            },
-          ),
+
+          }
+          }
+        ),
           ]
         
         )
@@ -80,6 +108,14 @@ class Media{
       this.releaseDate
     }
   );
+
+    factory Media.fromJson(Map<String, dynamic> json) {
+    return Media(
+      title: json['title'],
+      backdropUrl: json['backdrop_path'],
+      releaseDate: json['release_date'],
+    );
+  }
 }
 
 class SliderCard extends StatelessWidget {
@@ -215,8 +251,26 @@ class ImageWithShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    //   return CachedNetworkImage(
+    //   imageUrl: imageUrl,
+    //   height: height,
+    //   width: width,
+    //   fit: BoxFit.cover,
+    //   placeholder: (_, __) => Shimmer.fromColors(
+    //     baseColor: Colors.grey[850]!,
+    //     highlightColor: Colors.grey[800]!,
+    //     child: Container(
+    //       height: height,
+    //       color: Colors.white,
+    //     ),
+    //   ),
+    //   errorWidget: (_, __, ___) => const Icon(
+    //     Icons.error,
+    //     color:Colors.red
+    //   ),
+    // );
     return Image.asset(
-        imageUrl, 
+        "assets/img/"+imageUrl, 
         height: height,
         width: width,
         fit: BoxFit.cover,

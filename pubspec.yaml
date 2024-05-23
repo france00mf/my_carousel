@@ -67,6 +67,7 @@ flutter:
     - assets/img/kYgQzzjNis5jJalYtIHgrom0gOx.jpg
     - assets/img/qrGtVFxaD8c7et0jUtaYhyTzzPg.jpg
     - assets/img/tpiqEVTLRz2Mq7eLq5DT8jSrp71.jpg
+    - lib/data.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
