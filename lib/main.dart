@@ -31,10 +31,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-class CarouselItems{
-
-}
-
 class MyCarousel extends StatefulWidget {
   
  const  MyCarousel({super.key});
@@ -49,30 +45,49 @@ class _MyCarouselState extends State<MyCarousel> {
  late Future<Widget?> imageWidget;
  bool? isInternet;
 
-      @override
+  @override
   void initState() {
     super.initState();
-    filmes = verificarConectividade().then((temConexao) {
-      if (temConexao) {
-      return carregarFilmesApi();
-      } else {
-         return carregarFilmes();
-      }
-    });
+    filmes = carregarFilmes();
+    verificarConectividade().then((value) => print(value.toString()));
 
-     verificarConectividade().then((value) {
-      if(value){
-        return isInternet=value;
-      }else{
-        return isInternet=value;
-      }
-    });
+    StreamSubscription<List<ConnectivityResult>> subscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
+    // Received changes in available connectivity types!
+    print(result.toString());
+  });
+    
+    // verificarConectividade().then((temConexao) {
+    //   if (temConexao) {
+    //     isInternet=temConexao;
+    //   return carregarFilmesApi();
+    //   } else {
+    //       isInternet=temConexao;
+    //      return carregarFilmes();
+
+    //   }
+    // });
+
+    //  verificarConectividade().then((value) {
+    //   if(value){
+    //     return isInternet=value;
+    //   }else{
+    //     return isInternet=value;
+    //   }
+    // });
   }
 
 
    Future<bool> verificarConectividade() async {
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    return connectivityResult != ConnectivityResult.none;
+    bool connectivityResult = await Connectivity().checkConnectivity() != ConnectivityResult.none;
+
+    return connectivityResult;
+    // print(connectivityResult.toString());
+    // if(connectivityResult == ConnectivityResult.none) {
+    //   	return false;
+    // }else {
+    //   return true;
+    // }
+    // return connectivityResult != ConnectivityResult.none;
   }
 
   //Verificar se tem internet , para poder carregar o ficheiro json
@@ -102,7 +117,7 @@ class _MyCarouselState extends State<MyCarousel> {
              child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 50,),
+           const SizedBox(height: 50,),
         FutureBuilder<List<Media>>(
           future : filmes,
           builder:  (context, snapshot) {
@@ -118,6 +133,7 @@ class _MyCarouselState extends State<MyCarousel> {
                   return SliderCard(
                     media: filmes![itemIndex],
                     itemIndex: itemIndex,
+                    isInternet: isInternet
                   );
                 },
               );
@@ -136,13 +152,11 @@ class Media{
   String? backdropUrl;
   String? title;
   String? releaseDate;
-  bool? isOffline;
   Media(
     {
       this.backdropUrl,
       this.title,
       this.releaseDate,
-      this.isOffline
     }
   );
 
@@ -151,7 +165,6 @@ class Media{
       title: json['title'],
       backdropUrl: json['backdrop_path'],
       releaseDate: json['release_date'],
-      // isOffline: true
     );
   }
 }
@@ -160,11 +173,12 @@ class SliderCard extends StatelessWidget {
   const SliderCard({
     super.key,
     required this.media,
-    required this.itemIndex,
+    required this.itemIndex, this.isInternet,
   });
 
   final Media media;
   final int itemIndex;
+  final bool? isInternet;
   
 
   
@@ -180,7 +194,7 @@ class SliderCard extends StatelessWidget {
       child: SafeArea(
         child: Stack(
           children: [
-            SliderCardImage(imageUrl: media.backdropUrl!),
+            SliderCardImage(imageUrl: media.backdropUrl!, isInternet: isInternet),
             Padding(
               padding: const EdgeInsets.only(
                 right: 16,
@@ -241,10 +255,11 @@ class SliderCard extends StatelessWidget {
 class SliderCardImage extends StatelessWidget {
   const SliderCardImage({
     super.key,
-    required this.imageUrl,
+    required this.imageUrl, this.isInternet,
   });
 
   final String imageUrl;
+  final bool? isInternet;
 
   @override
   Widget build(BuildContext context) {
@@ -269,7 +284,7 @@ class SliderCardImage extends StatelessWidget {
         height: size.height * 0.6,
         width: double.infinity,
         imageUrl: imageUrl,
-
+        isInternet: isInternet
       ),
     );
   }
@@ -280,20 +295,21 @@ class ImageWithShimmer extends StatelessWidget {
     super.key,
     required this.imageUrl,
     required this.width,
-    required this.height,
+    required this.height, this.isInternet,
   });
 
   final String imageUrl;
   final double height;
   final double width;
+  final bool? isInternet;
 
   @override
   Widget build(BuildContext context) {
 
-    return    
+    return    isInternet==true?
     
         CachedNetworkImage(
-      imageUrl: imageUrl,
+      imageUrl:  getBackdropUrl(imageUrl),
       height: height,
       width: width,
       fit: BoxFit.cover,
@@ -309,7 +325,8 @@ class ImageWithShimmer extends StatelessWidget {
         Icons.error,
         color:Colors.red
       ),
-    );
+    ) 
+    :
     
     Image.asset(
         "assets/img/"+imageUrl, 
@@ -318,6 +335,14 @@ class ImageWithShimmer extends StatelessWidget {
         fit: BoxFit.cover,
       );
   }
+
+  String getBackdropUrl(String? path) {
+  if (path != null) {
+    return 'https://image.tmdb.org/t/p/w1280' + path;
+  } else {
+    return 'https://davidkoepp.com/wp-content/themes/blankslate/images/Movie%20Placeholder.jpg';
+  }
+}
 }
 
 
